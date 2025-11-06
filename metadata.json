@@ -1,0 +1,7 @@
+{
+  "name": "MindLink",
+  "description": "MindLink is an AI-powered productivity companion that connects your thoughts, notes, and actions in one intelligent space. It listens, learns, and adapts to your work style — automatically organizing your ideas, generating summaries, and turning daily conversations or voice notes into actionable to-do lists, documents, and insights.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
