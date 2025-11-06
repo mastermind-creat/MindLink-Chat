@@ -31,20 +31,17 @@ export interface VideosOperation {
   };
 }
 
-// The AIStudio interface has been inlined in the global Window declaration below
-// to resolve "conflicting global type declarations" errors.
-
 // Fix: Centralize global window type declarations to resolve conflicts.
 declare global {
+  // Fix: Moved AIStudio interface to the global scope to resolve declaration conflicts.
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+
   interface Window {
     webkitAudioContext: typeof AudioContext;
-    // Fix: Inlined the AIStudio type to resolve declaration conflicts.
-    aistudio: {
-      hasSelectedApiKey: () => Promise<boolean>;
-      openSelectKey: () => Promise<void>;
-    };
-    gemini: {
-        generateSpeech: (text: string) => Promise<string>;
-    };
+    // Fix: Made 'aistudio' optional to resolve a declaration conflict where modifiers did not match.
+    aistudio?: AIStudio;
   }
 }

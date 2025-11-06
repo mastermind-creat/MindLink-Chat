@@ -73,6 +73,13 @@ const PeerChatPanel: React.FC = () => {
     const channel = new BroadcastChannel(chatId);
     channel.onmessage = (event: MessageEvent<P2PMessage>) => {
       const newMessage = event.data;
+      // FIX: Add a guard to prevent a crash on receiving malformed messages.
+      // This can happen if another tab sends a null or non-object message.
+      if (!newMessage || typeof newMessage.senderId === 'undefined') {
+        console.warn("Received a malformed message, ignoring.", newMessage);
+        return;
+      }
+
       if (newMessage.senderId !== userId) {
         setMessages((prev) => [...prev, newMessage]);
       }
@@ -99,24 +106,39 @@ const PeerChatPanel: React.FC = () => {
 
   const handleJoinChat = () => {
     setError(null);
-    try {
-        if (!joinLink.trim()) {
-            throw new Error("Link cannot be empty.");
+    const linkOrId = joinLink.trim();
+    if (!linkOrId) {
+        setError("Link or ID cannot be empty.");
+        return;
+    }
+
+    let extractedId: string | null = null;
+    
+    // Use a robust method to extract the chat ID that avoids throwing errors.
+    const chatIdParam = 'chatId=';
+    const paramIndex = linkOrId.lastIndexOf(chatIdParam);
+
+    if (paramIndex !== -1) {
+        // Extract the substring after 'chatId='
+        let idPart = linkOrId.substring(paramIndex + chatIdParam.length);
+        // Clean up if there are other parameters
+        const nextParamIndex = idPart.indexOf('&');
+        if (nextParamIndex !== -1) {
+            idPart = idPart.substring(0, nextParamIndex);
         }
-        const url = new URL(joinLink);
-        const idFromLink = url.searchParams.get('chatId');
-        if (!idFromLink) {
-            throw new Error("The provided link is not a valid MindLink chat invite.");
+        extractedId = idPart;
+    } else {
+        // If 'chatId=' is not found, treat the whole string as a potential raw ID.
+        // This is a basic check for something that looks like a UUID.
+        if (!linkOrId.includes(' ') && !linkOrId.includes('/') && linkOrId.length > 20) {
+            extractedId = linkOrId;
         }
-        setChatId(idFromLink);
-    } catch(err) {
-        // Fallback for just pasting the ID
-        const potentialId = joinLink.split('?chatId=')[1] || joinLink;
-        if (potentialId.length > 10) { // Simple validation
-            setChatId(potentialId);
-        } else {
-            setError(err instanceof Error ? err.message : "Invalid link or ID provided.");
-        }
+    }
+    
+    if (extractedId) {
+        setChatId(extractedId);
+    } else {
+        setError("Could not find a valid Chat ID in the provided link or text. Please paste the full URL or just the ID.");
     }
   };
 
@@ -158,6 +180,7 @@ const PeerChatPanel: React.FC = () => {
                 type="text" 
                 value={joinLink}
                 onChange={(e) => setJoinLink(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleJoinChat()}
                 placeholder="Paste invite link or ID here..."
                 className="w-full p-3 bg-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMode, ChatMessage, GroundingSource } from '../types';
-import { generateChatResponse, playAudio } from '../services/geminiService';
+import { generateChatResponse, playAudio, generateSpeech } from '../services/geminiService';
 import Message from './Message';
 import { SendIcon, BotIcon, SearchIcon, MapPinIcon, BrainCircuitIcon, Volume2Icon, PlusIcon } from './Icon';
 import LoadingSpinner from './LoadingSpinner';
@@ -89,9 +89,7 @@ const ChatPanel: React.FC = () => {
       if (playingAudioId === message.id) return;
       setPlayingAudioId(message.id);
       try {
-          // This would ideally be a streaming call in a real app
-          // Fix: Remove `(window as any)` cast and rely on global types.
-          const base64Audio = await window.gemini.generateSpeech(message.text);
+          const base64Audio = await generateSpeech(message.text);
           await playAudio(base64Audio);
       } catch (err) {
           console.error("Failed to play audio:", err);
@@ -100,19 +98,6 @@ const ChatPanel: React.FC = () => {
           setPlayingAudioId(null);
       }
   };
-  
-  useEffect(() => {
-    // This is a workaround to make the function available on the window object
-    // for the handlePlayAudio function. In a real application with a module system,
-    // you would import it directly.
-    // Fix: Remove `(window as any)` cast and rely on global types.
-    window.gemini = {
-        generateSpeech: async (text: string) => {
-            const { generateSpeech } = await import('../services/geminiService');
-            return generateSpeech(text);
-        }
-    }
-  }, []);
 
   const ModeButton: React.FC<{mode: ChatMode, label: string, icon: React.ReactNode}> = ({mode, label, icon}) => (
       <button onClick={() => handleModeChange(mode)} className={`flex items-center px-4 py-2 text-sm font-medium rounded-full transition-colors duration-200 ${activeMode === mode ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
